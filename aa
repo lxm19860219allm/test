@@ -1,2 +1,47 @@
-test
-aa
+# learning a minimal KVM example
+"""
+kvm-hello-world is a very simple example program to demonstrate the use of the KVM API provided by 
+by the linux kernel. It acts as a very simple VM host, and runs a trivial program in a VM. I tested it
+on Intel processors with the VMX hardware virtualization extensions. it might work on AMD processors with
+AMD-V, but that hasn't been tested.
+background
+KVM is the Linux kernel subsystem that provides access to hardware virtualization features of the processor.
+On x86, this mean Intel's VMX or AMD's AMD-V. VMX is also known as VT-x; VT-x seems to be the marketing term,
+ehereas VMX is used in the Intel x86 manual set.
+In pratice, KVM is often employed via qemu. In that case, KVM provided virtualization of the cpu and a few other key
+hardware components intimately associated with the cpu, such as the interrupt controller. Qemu emulates all the devices
+making up the rest of a typical x86 system. Qemu predates KVM, and also operate independently of it, performing cpu
+virtualization in software instead.
+But if you want to learn about the details of KVM, qemu is not a great resource. It's a big project with a lot of features and
+support for emulating many devices.
+
+There's another project that is much more approachable:kvmtool. Like qemu, kvmtool does full-system emulation. Unlike
+qemu, it is deliberately minimal, emulating just a few devices. But while kvmtool is impressive demonstration of how simple
+and clean a KVM-based full-system emulator can be, it's still far more than a bare-bones example.
+
+So, as no such example seems to exist, I wrote one by studying api.txt and the kvmtool sources. (Update: When I wrote this,
+I had overlooked https://github.com/soulxu/kvmsample).
+
+Notes
+The code is straightforward. It:
+   opens /dev/kvm and checks the version.
+   Makes a KVM_CREATE_VM call to creates a VM.
+   uses mmap to allocate some memory for the VM.
+   Makes a KVM_CREATE_VCPU call to creates a VCPU within the VM, and mmaps its control area.
+   Sets the FLAGS and CS:IP registers of the VCPU.
+   copies a few bytes of code into the VM memory.
+   makes a KVM_RUN call to execute the VCPU.
+   checks that the VCPU execution had the expected result.
+ A couple od aspects are worth noting:
+ Note that the Intel VMX extensions did not initially implement support for real mode. In fact, they restricted VMX guests to
+ paged protected mode. VM hosts were expected to emulate the unsupported modes in software, only employing VMX when
+ a guest had entered paged protected mode (KVM does not implement such emulation support; I assume it is delegated to qemu).
+ Later VMX implementations (since Westmere aka Nehalem-C in 2010) include Unrestricted Guest Mode: support for
+ virtualization of all x86 modes in hardware.
+ 
+ The code run in the VM code exits with a HLT instruction. There are many ways to cause a VM exit, so why use a HLT
+ instruction? The most obvious way might be the VMCALL (or VMMCALL on AMD) instruction, which it specifically intended to
+ call out to the hypervisor. But it turns out the KVM reserves VMCALL/VMMCALL for its internal hypercall mechanism, without 
+notifying the userspace VM host program of the VM exits caused by these instructions. So we need some other way to
+trigger a VM exit. HLT is convenient because it is a single-byte instruction.
+"""
