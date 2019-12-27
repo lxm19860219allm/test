@@ -1,0 +1,97 @@
+ioctl()函数 ioctl是设备驱动程序中对设备的I/O通道进行管理的函数。所谓对I/O通道进行管理，就是对设备的
+一些特性进行控制，例如串口的传输波频率、马达的转速等等。它的调用个数如下：
+int ioctl(int fd, int cmd,...)
+其中fd是用户程序打开设备时使用open函数返回的文件标示符，cmd是用户程序对设备的控制命令，至于后面的省略号，
+那是一些补充参数，一般最多一个，这个参数的有无和cmd的意义相关。
+ioctl函数是文件结构中的一个属性分量，就是说你的驱动程序提供了对ioctl的支持，用户就可以在用户程序中使用ioctl函数来控制设备的
+I/O通道。
+fwrite()函数 fwrite()函数是c语言标准库中的一个文件处理函数，功能是向指定的文件中写入若干数据块，如成功执行则返回实际写入的数据块数目。
+该函数以二进制形式对文件进行操作，不局限于文本文件。
+函数原型 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+参数 ptr 这是指向要被写入的元素数组的指针。
+size 这是要被写入的每个元素的大小，以字节为单位。
+nmemb 这是元素的个数，每个元素的大小为size字节。
+stream 这是指向FILE对象的指针，该FILE对象指定了一个输出流。
+功能 把ptr所指向的数组中的数据写入到给定流stream中。
+返回值
+如果成功，该函数返回一个size_t对象，表示元素的总数，该对象是是一个整数数据类型。如果该数字与nmemb参数不同，则会显示一个错误。
+用法
+szie_t fwrite(const void *buffer, size_t size, size_t count, FILE *stream);
+返回值：返回实际写入的数据块数目
+（1）buffer：是一个指针，对fwrite来说，是要获取数据的地址；
+（2）size：要写入内容的单字节数；
+（3）count：要进行写入size字节的数据项的个数；
+（4）stream：目标文件指针；
+（5）返回实际写入的数据项个数count。
+说明：写入到文件的哪里？这个与文件的打开模式有关，如果是w+，则是从file pointer指向的地址开始写，替换
+掉之后的内容，文件的长度可以不变，stream的位置移动count个数；如果是a+，则从文件的末尾开始添加，文件长度加大。
+fseek对此函数有作用，但是fwrite函数写到用户空间缓充区，并未同步到文件中，所以修改后要将内存与文件同步
+可以用fflush(FILE *fp)函数同步。
+示例1
+#include <stdio.h>
+#define SIZE 1
+typedef struct
+{
+    char name[10];
+    int num;
+    int age;
+    char addr[15];
+}student;
+
+student stu[SIZE];
+void save()
+{
+    FILE *fp;
+    int i;
+    if((fp=fopen("dat.txt","w")) == NULL)
+    {
+        printf("无法打开此文件！\n");
+        return;
+    }
+    for(i=0;i<SIZE;i++)
+    if(fwrite(&stu[i],sizeof(student),1,fp) != 1)
+    printf("文件写入错误！\n");
+    fclose(fp);
+}
+
+void main()
+{
+    int i;
+    for(i=0;i<SIZE;i++)
+        scanf("%s%d%d%s", &stu[i].name,&stu[i].num,&stu[i].age,&stu[i].addr);
+     save();   
+}
+
+示例2
+#include <stdio.h>
+#include <string.h>
+int main ()
+{
+    FILE *fp;
+    char msg[] = "file content";
+    char buf[20];
+    fp = fopen("d:\\a\\a.txt","w+");
+    if (NULL == fp)
+    {
+        printf("The file doesn't exist!\n");
+        return -1;
+    }
+    fwrite(msg,strlen(msg),1,fp);
+    fseek(fp,0,SEEK_SET);
+    fread(buf,strlen(msg),1,fp);
+    buf[strlen(msg)] = '\0';
+    printf("buf = %s\n",buf);
+    printf("strlen(buf) = %d\n", strlen(buf));
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
